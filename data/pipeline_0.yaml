@@ -1,0 +1,27 @@
+pipeline:
+  name: "My linear ML pipeline."
+  inputs:
+    - document_id
+    - page_num
+  outputs:
+    - extractor.extractions
+  components:
+    image_preprocessing:
+      runner: ImagePreprocessor
+      inputs:
+        - document_id
+        - page_num
+      outputs:
+        - page_id
+    image_ocr:
+      runner: OCRModel2
+      inputs:
+        - image_preprocessing.page_id
+      outputs:
+        - page_id
+    extractor:
+      runner: ExtractionModel
+      inputs:
+        - image_ocr.page_id
+      outputs:
+        - extractions

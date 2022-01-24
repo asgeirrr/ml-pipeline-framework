@@ -1,0 +1,34 @@
+pipeline:
+  name: "My branched ML pipeline."
+  inputs:
+    - input_0
+    - input_1
+  outputs:
+    - test_processor_3.output_3
+  components:
+    test_processor_0:
+      runner: ImagePreprocessor
+      inputs:
+        - input_0
+      outputs:
+        - output_0
+    test_processor_1:
+      runner: ExtractionModel
+      inputs:
+        - input_1
+      outputs:
+        - output_1
+    test_processor_2:
+      runner: ExtractionModel
+      inputs:
+        - test_processor_0.output_0
+      outputs:
+        - output_2
+    test_processor_3:
+      runner: ExtractionModel
+      inputs:
+        - test_processor_2.output_2
+        - test_processor_1.output_1
+      outputs:
+        - output_3
+        - output_4
