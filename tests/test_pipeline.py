@@ -7,7 +7,7 @@ class TestPipeline(unittest.TestCase):
         path = "data/pipeline_1.yaml"
         pipeline_builder = PipelineBuilder("mlpipeline.custom")
         pipeline = pipeline_builder.build_pipeline(path)
-        self.assertEqual(set(pipeline.execute({"input_0": 0, "input_1": 1}).keys()), set(["test_processor_3.output_3"]))
+        self.assertEqual(set(pipeline.execute({"document_id": 0, "page_num": 1}).keys()), set(["test_processor_3.output_3"]))
 
     def test_get_running_order(self):
         pipeline = Pipeline("test", set(), set(), dict(), [])

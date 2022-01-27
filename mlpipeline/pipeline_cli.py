@@ -9,9 +9,10 @@ def main():
     args = parser.parse_args()
 
     inputs = {}
-    for arg in args.inputs:
-        key, value = arg.split('=')
-        inputs[key] = value
+    if args.inputs:
+        for arg in args.inputs:
+            key, value = arg.split('=')
+            inputs[key] = value
 
     config_path = args.file
     pipeline_builder = PipelineBuilder("mlpipeline.custom")

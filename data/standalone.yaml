@@ -1,11 +1,16 @@
 pipeline:
-  name: "My missing inputs pipeline."
-  outputs:
-    - extractor.extractions
+  name: "My linear ML pipeline."
   inputs:
+    - document_id
+    - page_num
+  outputs:
+    - image_ocr.page_id
   components:
     image_preprocessing:
       runner: ImagePreprocessor
+      inputs:
+        - document_id
+        - page_num
       outputs:
         - page_id
     image_ocr:
@@ -14,9 +19,8 @@ pipeline:
         - image_preprocessing.page_id
       outputs:
         - page_id
-    extractor:
-      runner: ExtractionModel
+    stand_alone:
       inputs:
-        - image_ocr.page_id
-      outputs:
-        - extractions
+        - document_id
+        - page_num
+      runner: EmptyComponent

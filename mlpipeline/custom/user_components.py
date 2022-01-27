@@ -18,6 +18,9 @@ class ImagePreprocessor(Component):
 
 
 class OCRModel2(Component):
+    '''Passes input to output
+    '''
+
     def process(self, inputs: dict) -> dict:
         outputs = {}
         for output_key in self.outputs:
@@ -33,3 +36,8 @@ class ExtractionModel(Component):
         for output_key in self.outputs:
             outputs[output_key] = "A" + str(np.random.choice(self.RANDOM_VALUES))
         return outputs
+
+
+class EmptyComponent(Component):
+    def process(self, inputs: dict) -> dict:
+        return {}

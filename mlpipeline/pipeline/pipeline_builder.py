@@ -316,13 +316,28 @@ class PipelineBuilder:
         '''
 
         config = self._read_config(config_path)["pipeline"]
+
+        if "name" not in config:
+            L.error("No pipeline name, shutting down")
+            raise RuntimeError("There are no pipeline name specified in config")
+
         name = config["name"]
-        inputs = set(config.get("inputs", []))
+        inputs = config.get("inputs")
+        if not inputs:
+            inputs = set()
+
+        inputs = set(inputs)
+
         if not self._verify_inputs(inputs):
             L.error("Incorrect inputs, shutting down")
             raise RuntimeError("Incorrect inputs")
 
-        outputs = set(config.get("outputs", []))
+        outputs = config.get("outputs")
+        if not outputs:
+            outputs = set()
+
+        outputs = set(outputs)
+
         if "components" not in config:
             L.error("No components, shutting down")
             raise RuntimeError("There are no components specified in config")
