@@ -7,7 +7,7 @@ from .component import Component
 
 ##
 L = logging.getLogger(__name__)
-L.setLevel(logging.INFO)
+logging.basicConfig(level=logging.INFO)
 ##
 
 
@@ -128,6 +128,7 @@ class PipelineBuilder:
                 if self._verify_edge(components, inputs, outputs, dependency, component_id):
                     graph[dependency].add(component_id)
                 else:
+                    L.error("Incorrect graph, shutting down")
                     raise RuntimeError("Incorrect link from {} to {}, inputs don't match the outputs".format(dependency, component_id))
 
         if len(outputs) > 0:
@@ -137,6 +138,7 @@ class PipelineBuilder:
             output_split = output.split(".")
             if len(output_split) == 1:
                 if output_split not in inputs:
+                    L.error("Incorrect outputs, shutting down")
                     raise RuntimeError("Incorrect outputs {}".format(outputs))
 
                 graph["inputs"].add("outputs")
@@ -145,9 +147,11 @@ class PipelineBuilder:
                 if self._verify_edge(components, inputs, outputs, output_split[0], "outputs"):
                     graph[output_split[0]].add("outputs")
                 else:
+                    L.error("Incorrect outputs, shutting down")
                     raise RuntimeError("Incorrect outputs {}".format(outputs))
 
             else:
+                L.error("Incorrect inputs, shutting down")
                 raise RuntimeError("Incorrect input {}, should be <component_id>.<input_name>".format(output))
 
         return graph
@@ -181,6 +185,7 @@ class PipelineBuilder:
         if not self._check_cycle(running_order[:], graph):
             running_order.reverse()
         else:
+            L.error("Incorrect graph, shutting down")
             raise RuntimeError("The component pipeline contains cycle")
 
         return running_order
@@ -254,11 +259,17 @@ class PipelineBuilder:
         if from_id == 'inputs':
             outputs_from = inputs
         else:
+            if from_id not in components:
+                return False
+
             outputs_from = components[from_id].outputs
 
         if to_id == 'outputs':
             inputs_to = outputs
         else:
+            if to_id not in components:
+                return False
+
             inputs_to = components[to_id].inputs
 
         for inpt in inputs_to:
@@ -308,10 +319,12 @@ class PipelineBuilder:
         name = config["name"]
         inputs = set(config.get("inputs", []))
         if not self._verify_inputs(inputs):
+            L.error("Incorrect inputs, shutting down")
             raise RuntimeError("Incorrect inputs")
 
         outputs = set(config.get("outputs", []))
         if "components" not in config:
+            L.error("No components, shutting down")
             raise RuntimeError("There are no components specified in config")
 
         components_definintion = config["components"]

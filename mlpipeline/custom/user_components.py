@@ -4,7 +4,6 @@ from mlpipeline.pipeline import Component
 
 ##
 L = logging.getLogger(__name__)
-L.setLevel(logging.INFO)
 ##
 
 

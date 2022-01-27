@@ -4,9 +4,7 @@ from ..utils import get_keys_values
 
 ##
 L = logging.getLogger(__name__)
-L.setLevel(logging.DEBUG)
 logging.basicConfig(level=logging.INFO)
-L.info('Started')
 ##
 
 
@@ -35,8 +33,8 @@ class Component:
         '''
 
         self.name = component_id
-        self.inputs = set(component_definition["inputs"])
-        self.outputs = set(component_definition["outputs"])
+        self.inputs = set(component_definition.get("inputs", []))
+        self.outputs = set(component_definition.get("outputs", []))
         self.dependencies = self._get_dependencies()
 
     def _get_dependencies(self) -> set:

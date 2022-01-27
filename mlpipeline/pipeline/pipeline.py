@@ -4,7 +4,7 @@ from ..utils import get_keys_values
 
 ##
 L = logging.getLogger(__name__)
-L.setLevel(logging.INFO)
+logging.basicConfig(level=logging.INFO)
 ##
 
 
