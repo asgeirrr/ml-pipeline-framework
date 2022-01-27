@@ -56,17 +56,16 @@
     <main class="pdoc">
             <section>
                     <h1 class="modulename">
-mlpipeline<wbr>.<a href="./../pipeline.html">pipeline</a><wbr>.pipeline_builder    </h1>
+<a href="./../../mlpipeline.html">mlpipeline</a><wbr>.<a href="./../pipeline.html">pipeline</a><wbr>.pipeline_builder    </h1>
 
                 
                         <details>
             <summary>View Source</summary>
             <div class="codehilite"><pre><span></span><span class="kn">import</span> <span class="nn">logging</span>
-<span class="kn">import</span> <span class="nn">yaml</span>
-<span class="kn">import</span> <span class="nn">importlib</span>
 
 <span class="kn">from</span> <span class="nn">.pipeline</span> <span class="kn">import</span> <span class="n">Pipeline</span>
-<span class="kn">from</span> <span class="nn">.component</span> <span class="kn">import</span> <span class="n">Component</span>
+<span class="kn">from</span> <span class="nn">.config_parser</span> <span class="kn">import</span> <span class="n">ConfigParser</span>
+<span class="kn">from</span> <span class="nn">.graph_utils</span> <span class="kn">import</span> <span class="n">GraphUtils</span>
 
 <span class="c1">##</span>
 <span class="n">L</span> <span class="o">=</span> <span class="n">logging</span><span class="o">.</span><span class="n">getLogger</span><span class="p">(</span><span class="vm">__name__</span><span class="p">)</span>
@@ -75,7 +74,7 @@ mlpipeline<wbr>.<a href="./../pipeline.html">pipeline</a><wbr>.pipeline_builder 
 
 
 <span class="k">class</span> <span class="nc">PipelineBuilder</span><span class="p">:</span>
-    <span class="sd">&#39;&#39;&#39;</span>
+    <span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">    Reads config file and builds the pipeline.</span>
 
 <span class="sd">    ...</span>
@@ -84,288 +83,20 @@ mlpipeline<wbr>.<a href="./../pipeline.html">pipeline</a><wbr>.pipeline_builder 
 <span class="sd">    -------</span>
 <span class="sd">    build_pipeline(config_path: str)</span>
 <span class="sd">        Creates pipeline from given config</span>
-<span class="sd">    &#39;&#39;&#39;</span>
+<span class="sd">    &quot;&quot;&quot;</span>
 
     <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">components_module</span><span class="p">:</span> <span class="nb">str</span><span class="p">):</span>
-        <span class="sd">&#39;&#39;&#39;</span>
+        <span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">        Parameters</span>
 <span class="sd">        ----------</span>
 <span class="sd">        components_module : str</span>
 <span class="sd">            A path where components are defined</span>
-<span class="sd">        &#39;&#39;&#39;</span>
+<span class="sd">        &quot;&quot;&quot;</span>
 
         <span class="bp">self</span><span class="o">.</span><span class="n">_components_module</span> <span class="o">=</span> <span class="n">components_module</span>
 
-    <span class="k">def</span> <span class="nf">_read_config</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">config_path</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">dict</span><span class="p">:</span>
-        <span class="sd">&#39;&#39;&#39; Reads config yaml file and creates a dictionary</span>
-
-<span class="sd">        Parameters</span>
-<span class="sd">        ----------</span>
-<span class="sd">        config_path : str</span>
-<span class="sd">            A path to configuration of pipeline and components</span>
-
-<span class="sd">        Returns</span>
-<span class="sd">        -------</span>
-<span class="sd">        dict</span>
-<span class="sd">            config</span>
-<span class="sd">        &#39;&#39;&#39;</span>
-
-        <span class="k">with</span> <span class="nb">open</span><span class="p">(</span><span class="n">config_path</span><span class="p">)</span> <span class="k">as</span> <span class="n">fp</span><span class="p">:</span>
-            <span class="k">return</span> <span class="n">yaml</span><span class="o">.</span><span class="n">safe_load</span><span class="p">(</span><span class="n">fp</span><span class="p">)</span>
-
-    <span class="k">def</span> <span class="nf">_parse_components</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">components_definition</span><span class="p">:</span> <span class="nb">dict</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">dict</span><span class="p">:</span>
-        <span class="sd">&#39;&#39;&#39;Creates componenents from configuration.</span>
-
-<span class="sd">        Parameters</span>
-<span class="sd">        ----------</span>
-<span class="sd">        components_definition : dict</span>
-<span class="sd">            A dictionary with raw components info from configuration</span>
-
-<span class="sd">        Returns</span>
-<span class="sd">        -------</span>
-<span class="sd">        dict</span>
-<span class="sd">            component_id -&gt; component</span>
-<span class="sd">        &#39;&#39;&#39;</span>
-
-        <span class="n">components</span> <span class="o">=</span> <span class="p">{}</span>
-        <span class="k">for</span> <span class="n">component_name</span> <span class="ow">in</span> <span class="n">components_definition</span><span class="p">:</span>
-            <span class="n">components</span><span class="p">[</span><span class="n">component_name</span><span class="p">]</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_build_component</span><span class="p">(</span><span class="n">component_name</span><span class="p">,</span> <span class="n">components_definition</span><span class="p">[</span><span class="n">component_name</span><span class="p">])</span>
-
-        <span class="k">return</span> <span class="n">components</span>
-
-    <span class="k">def</span> <span class="nf">_build_component</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">component_name</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">component_definition</span><span class="p">:</span> <span class="nb">dict</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Component</span><span class="p">:</span>
-        <span class="sd">&#39;&#39;&#39;Creates single omponenent from its&#39; configuration.</span>
-
-<span class="sd">        Parameters</span>
-<span class="sd">        ----------</span>
-<span class="sd">        component_name : str</span>
-<span class="sd">            Name of the component</span>
-<span class="sd">        component_definition : dict</span>
-<span class="sd">            A dictionary with raw component info from configuration</span>
-
-<span class="sd">        Returns</span>
-<span class="sd">        -------</span>
-<span class="sd">        Component</span>
-<span class="sd">            a component object</span>
-<span class="sd">        &#39;&#39;&#39;</span>
-
-        <span class="n">module</span> <span class="o">=</span> <span class="n">importlib</span><span class="o">.</span><span class="n">import_module</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_components_module</span><span class="p">)</span>
-        <span class="n">component_class</span> <span class="o">=</span> <span class="nb">getattr</span><span class="p">(</span><span class="n">module</span><span class="p">,</span> <span class="n">component_definition</span><span class="p">[</span><span class="s2">&quot;runner&quot;</span><span class="p">])</span>
-        <span class="k">return</span> <span class="n">component_class</span><span class="o">.</span><span class="n">construct</span><span class="p">(</span><span class="n">component_name</span><span class="p">,</span> <span class="n">component_definition</span><span class="p">)</span>
-
-    <span class="k">def</span> <span class="nf">_create_graph</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">components</span><span class="p">:</span> <span class="nb">dict</span><span class="p">,</span> <span class="n">inputs</span><span class="p">:</span> <span class="nb">set</span><span class="p">,</span> <span class="n">outputs</span><span class="p">:</span> <span class="nb">set</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">dict</span><span class="p">:</span>
-        <span class="sd">&#39;&#39;&#39;Creates the dependency graph between components, where node is component id and edge represents the link between them.</span>
-
-<span class="sd">        Parameters</span>
-<span class="sd">        ----------</span>
-<span class="sd">        components : dict</span>
-<span class="sd">            The components info</span>
-
-<span class="sd">        inputs: set</span>
-<span class="sd">            The set of pipeline inputs</span>
-<span class="sd">        outputs: set</span>
-<span class="sd">            The set of pipeline outputs</span>
-
-<span class="sd">        Returns</span>
-<span class="sd">        -------</span>
-<span class="sd">        dict</span>
-<span class="sd">            graph representation of components</span>
-
-<span class="sd">        Raises</span>
-<span class="sd">        ------</span>
-<span class="sd">        RuntimeError</span>
-<span class="sd">            If the inputs of one component don&#39;t match with the output of the component it depends on</span>
-<span class="sd">            OR inputs and outputs in incorrect format</span>
-<span class="sd">        &#39;&#39;&#39;</span>
-
-        <span class="n">graph</span> <span class="o">=</span> <span class="p">{}</span>
-        <span class="k">for</span> <span class="n">component_id</span> <span class="ow">in</span> <span class="n">components</span><span class="p">:</span>
-            <span class="n">dependencies</span> <span class="o">=</span> <span class="n">components</span><span class="p">[</span><span class="n">component_id</span><span class="p">]</span><span class="o">.</span><span class="n">dependencies</span>
-            <span class="k">if</span> <span class="n">component_id</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">graph</span><span class="p">:</span>
-                <span class="n">graph</span><span class="p">[</span><span class="n">component_id</span><span class="p">]</span> <span class="o">=</span> <span class="nb">set</span><span class="p">()</span>
-
-            <span class="k">for</span> <span class="n">dependency</span> <span class="ow">in</span> <span class="n">dependencies</span><span class="p">:</span>
-                <span class="k">if</span> <span class="n">dependency</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">graph</span><span class="p">:</span>
-                    <span class="n">graph</span><span class="p">[</span><span class="n">dependency</span><span class="p">]</span> <span class="o">=</span> <span class="nb">set</span><span class="p">()</span>
-
-                <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">_verify_edge</span><span class="p">(</span><span class="n">components</span><span class="p">,</span> <span class="n">inputs</span><span class="p">,</span> <span class="n">outputs</span><span class="p">,</span> <span class="n">dependency</span><span class="p">,</span> <span class="n">component_id</span><span class="p">):</span>
-                    <span class="n">graph</span><span class="p">[</span><span class="n">dependency</span><span class="p">]</span><span class="o">.</span><span class="n">add</span><span class="p">(</span><span class="n">component_id</span><span class="p">)</span>
-                <span class="k">else</span><span class="p">:</span>
-                    <span class="n">L</span><span class="o">.</span><span class="n">error</span><span class="p">(</span><span class="s2">&quot;Incorrect graph, shutting down&quot;</span><span class="p">)</span>
-                    <span class="k">raise</span> <span class="ne">RuntimeError</span><span class="p">(</span><span class="s2">&quot;Incorrect link from </span><span class="si">{}</span><span class="s2"> to </span><span class="si">{}</span><span class="s2">, inputs don&#39;t match the outputs&quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">dependency</span><span class="p">,</span> <span class="n">component_id</span><span class="p">))</span>
-
-        <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">outputs</span><span class="p">)</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="p">:</span>
-            <span class="n">graph</span><span class="p">[</span><span class="s2">&quot;outputs&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="nb">set</span><span class="p">()</span>
-
-        <span class="k">for</span> <span class="n">output</span> <span class="ow">in</span> <span class="n">outputs</span><span class="p">:</span>
-            <span class="n">output_split</span> <span class="o">=</span> <span class="n">output</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="s2">&quot;.&quot;</span><span class="p">)</span>
-            <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">output_split</span><span class="p">)</span> <span class="o">==</span> <span class="mi">1</span><span class="p">:</span>
-                <span class="k">if</span> <span class="n">output_split</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">inputs</span><span class="p">:</span>
-                    <span class="n">L</span><span class="o">.</span><span class="n">error</span><span class="p">(</span><span class="s2">&quot;Incorrect outputs, shutting down&quot;</span><span class="p">)</span>
-                    <span class="k">raise</span> <span class="ne">RuntimeError</span><span class="p">(</span><span class="s2">&quot;Incorrect outputs </span><span class="si">{}</span><span class="s2">&quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">outputs</span><span class="p">))</span>
-
-                <span class="n">graph</span><span class="p">[</span><span class="s2">&quot;inputs&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">add</span><span class="p">(</span><span class="s2">&quot;outputs&quot;</span><span class="p">)</span>
-
-            <span class="k">elif</span> <span class="nb">len</span><span class="p">(</span><span class="n">output_split</span><span class="p">)</span> <span class="o">==</span> <span class="mi">2</span><span class="p">:</span>
-                <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">_verify_edge</span><span class="p">(</span><span class="n">components</span><span class="p">,</span> <span class="n">inputs</span><span class="p">,</span> <span class="n">outputs</span><span class="p">,</span> <span class="n">output_split</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="s2">&quot;outputs&quot;</span><span class="p">):</span>
-                    <span class="n">graph</span><span class="p">[</span><span class="n">output_split</span><span class="p">[</span><span class="mi">0</span><span class="p">]]</span><span class="o">.</span><span class="n">add</span><span class="p">(</span><span class="s2">&quot;outputs&quot;</span><span class="p">)</span>
-                <span class="k">else</span><span class="p">:</span>
-                    <span class="n">L</span><span class="o">.</span><span class="n">error</span><span class="p">(</span><span class="s2">&quot;Incorrect outputs, shutting down&quot;</span><span class="p">)</span>
-                    <span class="k">raise</span> <span class="ne">RuntimeError</span><span class="p">(</span><span class="s2">&quot;Incorrect outputs </span><span class="si">{}</span><span class="s2">&quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">outputs</span><span class="p">))</span>
-
-            <span class="k">else</span><span class="p">:</span>
-                <span class="n">L</span><span class="o">.</span><span class="n">error</span><span class="p">(</span><span class="s2">&quot;Incorrect inputs, shutting down&quot;</span><span class="p">)</span>
-                <span class="k">raise</span> <span class="ne">RuntimeError</span><span class="p">(</span><span class="s2">&quot;Incorrect input </span><span class="si">{}</span><span class="s2">, should be &lt;component_id&gt;.&lt;input_name&gt;&quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">output</span><span class="p">))</span>
-
-        <span class="k">return</span> <span class="n">graph</span>
-
-    <span class="k">def</span> <span class="nf">_get_running_order</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">graph</span><span class="p">:</span> <span class="nb">dict</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">list</span><span class="p">:</span>
-        <span class="sd">&#39;&#39;&#39;Gets the dependency graph topologically sorted and creates an order of components to be executed in optimal order.</span>
-<span class="sd">        Checks if the graph contains a cycle (if output of one component is referenced somewhere in its&#39; deps)</span>
-
-<span class="sd">        Parameters</span>
-<span class="sd">        ----------</span>
-<span class="sd">        graph : dict</span>
-<span class="sd">            Components dependency graph</span>
-
-<span class="sd">        Returns</span>
-<span class="sd">        -------</span>
-<span class="sd">        list</span>
-<span class="sd">            running order of the graph</span>
-
-<span class="sd">        Raises</span>
-<span class="sd">        ------</span>
-<span class="sd">        RuntimeError</span>
-<span class="sd">            If the graph contains a cycle</span>
-<span class="sd">        &#39;&#39;&#39;</span>
-
-        <span class="n">visited</span> <span class="o">=</span> <span class="nb">set</span><span class="p">()</span>
-        <span class="n">running_order</span> <span class="o">=</span> <span class="p">[]</span>
-        <span class="k">for</span> <span class="n">component_id</span> <span class="ow">in</span> <span class="n">graph</span><span class="p">:</span>
-            <span class="k">if</span> <span class="n">component_id</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">visited</span><span class="p">:</span>
-                <span class="bp">self</span><span class="o">.</span><span class="n">_get_running_order_util</span><span class="p">(</span><span class="n">component_id</span><span class="p">,</span> <span class="n">graph</span><span class="p">,</span> <span class="n">visited</span><span class="p">,</span> <span class="n">running_order</span><span class="p">)</span>
-
-        <span class="k">if</span> <span class="ow">not</span> <span class="bp">self</span><span class="o">.</span><span class="n">_check_cycle</span><span class="p">(</span><span class="n">running_order</span><span class="p">[:],</span> <span class="n">graph</span><span class="p">):</span>
-            <span class="n">running_order</span><span class="o">.</span><span class="n">reverse</span><span class="p">()</span>
-        <span class="k">else</span><span class="p">:</span>
-            <span class="n">L</span><span class="o">.</span><span class="n">error</span><span class="p">(</span><span class="s2">&quot;Incorrect graph, shutting down&quot;</span><span class="p">)</span>
-            <span class="k">raise</span> <span class="ne">RuntimeError</span><span class="p">(</span><span class="s2">&quot;The component pipeline contains cycle&quot;</span><span class="p">)</span>
-
-        <span class="k">return</span> <span class="n">running_order</span>
-
-    <span class="k">def</span> <span class="nf">_get_running_order_util</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">component_id</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">graph</span><span class="p">:</span> <span class="nb">dict</span><span class="p">,</span> <span class="n">visited</span><span class="p">:</span> <span class="nb">set</span><span class="p">,</span> <span class="n">running_order</span><span class="p">:</span> <span class="nb">list</span><span class="p">):</span>
-        <span class="sd">&#39;&#39;&#39;Helper function for _get_running_order</span>
-<span class="sd">        &#39;&#39;&#39;</span>
-
-        <span class="n">visited</span><span class="o">.</span><span class="n">add</span><span class="p">(</span><span class="n">component_id</span><span class="p">)</span>
-
-        <span class="k">for</span> <span class="n">neighbor</span> <span class="ow">in</span> <span class="n">graph</span><span class="p">[</span><span class="n">component_id</span><span class="p">]:</span>
-            <span class="k">if</span> <span class="n">neighbor</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">visited</span><span class="p">:</span>
-                <span class="bp">self</span><span class="o">.</span><span class="n">_get_running_order_util</span><span class="p">(</span><span class="n">neighbor</span><span class="p">,</span> <span class="n">graph</span><span class="p">,</span> <span class="n">visited</span><span class="p">,</span> <span class="n">running_order</span><span class="p">)</span>
-
-        <span class="n">running_order</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">component_id</span><span class="p">)</span>
-
-    <span class="k">def</span> <span class="nf">_check_cycle</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">running_order_reversed</span><span class="p">:</span> <span class="nb">list</span><span class="p">,</span> <span class="n">graph</span><span class="p">:</span> <span class="nb">dict</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">bool</span><span class="p">:</span>
-        <span class="sd">&#39;&#39;&#39;Checks if the dependency graph contains a cycle</span>
-
-<span class="sd">        Parameters</span>
-<span class="sd">        ----------</span>
-<span class="sd">        running_order_reversed : list</span>
-<span class="sd">            Stack of visited nodes</span>
-<span class="sd">        graph : dict</span>
-<span class="sd">            Components dependency graph</span>
-
-<span class="sd">        Returns</span>
-<span class="sd">        -------</span>
-<span class="sd">        bool</span>
-<span class="sd">            if contains a cycle</span>
-<span class="sd">        &#39;&#39;&#39;</span>
-
-        <span class="n">top_order</span> <span class="o">=</span> <span class="nb">dict</span><span class="p">()</span>
-        <span class="n">index</span> <span class="o">=</span> <span class="mi">0</span>
-        <span class="k">while</span> <span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">running_order_reversed</span><span class="p">)</span> <span class="o">!=</span> <span class="mi">0</span><span class="p">):</span>
-            <span class="n">top_order</span><span class="p">[</span><span class="n">running_order_reversed</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">]]</span> <span class="o">=</span> <span class="n">index</span>
-            <span class="n">index</span> <span class="o">+=</span> <span class="mi">1</span>
-            <span class="n">running_order_reversed</span><span class="o">.</span><span class="n">pop</span><span class="p">()</span>
-
-        <span class="k">for</span> <span class="n">component_id</span> <span class="ow">in</span> <span class="n">graph</span><span class="p">:</span>
-            <span class="k">for</span> <span class="n">neighbor</span> <span class="ow">in</span> <span class="n">graph</span><span class="p">[</span><span class="n">component_id</span><span class="p">]:</span>
-                <span class="n">first</span> <span class="o">=</span> <span class="mi">0</span> <span class="k">if</span> <span class="n">component_id</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">top_order</span> <span class="k">else</span> <span class="n">top_order</span><span class="p">[</span><span class="n">component_id</span><span class="p">]</span>
-                <span class="n">second</span> <span class="o">=</span> <span class="mi">0</span> <span class="k">if</span> <span class="n">neighbor</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">top_order</span> <span class="k">else</span> <span class="n">top_order</span><span class="p">[</span><span class="n">neighbor</span><span class="p">]</span>
-                <span class="k">if</span> <span class="p">(</span><span class="n">first</span> <span class="o">&gt;</span> <span class="n">second</span><span class="p">):</span>
-                    <span class="k">return</span> <span class="kc">True</span>
-
-        <span class="k">return</span> <span class="kc">False</span>
-
-    <span class="k">def</span> <span class="nf">_verify_edge</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">components</span><span class="p">:</span> <span class="nb">dict</span><span class="p">,</span> <span class="n">inputs</span><span class="p">:</span> <span class="nb">set</span><span class="p">,</span> <span class="n">outputs</span><span class="p">:</span> <span class="nb">set</span><span class="p">,</span> <span class="n">from_id</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">to_id</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">bool</span><span class="p">:</span>
-        <span class="sd">&#39;&#39;&#39;Checks if an edge is correct (input of one component matches the output of its dependency)</span>
-
-<span class="sd">        Parameters</span>
-<span class="sd">        ----------</span>
-<span class="sd">        components : dict</span>
-<span class="sd">            All components</span>
-<span class="sd">        inputs : set</span>
-<span class="sd">            Pipeline inputs</span>
-<span class="sd">        outputs : set</span>
-<span class="sd">            Pipeline outputs</span>
-<span class="sd">        from_id : str</span>
-<span class="sd">            Id of previous component</span>
-<span class="sd">        to_id : str</span>
-<span class="sd">            Id of next component</span>
-
-<span class="sd">        Returns</span>
-<span class="sd">        -------</span>
-<span class="sd">        bool</span>
-<span class="sd">            if correct</span>
-<span class="sd">        &#39;&#39;&#39;</span>
-
-        <span class="k">if</span> <span class="n">from_id</span> <span class="o">==</span> <span class="s1">&#39;inputs&#39;</span><span class="p">:</span>
-            <span class="n">outputs_from</span> <span class="o">=</span> <span class="n">inputs</span>
-        <span class="k">else</span><span class="p">:</span>
-            <span class="k">if</span> <span class="n">from_id</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">components</span><span class="p">:</span>
-                <span class="k">return</span> <span class="kc">False</span>
-
-            <span class="n">outputs_from</span> <span class="o">=</span> <span class="n">components</span><span class="p">[</span><span class="n">from_id</span><span class="p">]</span><span class="o">.</span><span class="n">outputs</span>
-
-        <span class="k">if</span> <span class="n">to_id</span> <span class="o">==</span> <span class="s1">&#39;outputs&#39;</span><span class="p">:</span>
-            <span class="n">inputs_to</span> <span class="o">=</span> <span class="n">outputs</span>
-        <span class="k">else</span><span class="p">:</span>
-            <span class="k">if</span> <span class="n">to_id</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">components</span><span class="p">:</span>
-                <span class="k">return</span> <span class="kc">False</span>
-
-            <span class="n">inputs_to</span> <span class="o">=</span> <span class="n">components</span><span class="p">[</span><span class="n">to_id</span><span class="p">]</span><span class="o">.</span><span class="n">inputs</span>
-
-        <span class="k">for</span> <span class="n">inpt</span> <span class="ow">in</span> <span class="n">inputs_to</span><span class="p">:</span>
-            <span class="n">split_inpt</span> <span class="o">=</span> <span class="n">inpt</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="s2">&quot;.&quot;</span><span class="p">)</span>
-            <span class="k">if</span> <span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">split_inpt</span><span class="p">)</span> <span class="o">==</span> <span class="mi">1</span><span class="p">)</span> <span class="ow">and</span> <span class="p">(</span><span class="n">split_inpt</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">outputs_from</span><span class="p">):</span>
-                <span class="k">return</span> <span class="kc">False</span>
-
-            <span class="k">if</span> <span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">split_inpt</span><span class="p">)</span> <span class="o">==</span> <span class="mi">2</span><span class="p">)</span> <span class="ow">and</span> <span class="p">(</span><span class="n">split_inpt</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">==</span> <span class="n">from_id</span><span class="p">)</span> <span class="ow">and</span> <span class="p">(</span><span class="n">split_inpt</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">outputs_from</span><span class="p">):</span>
-                <span class="k">return</span> <span class="kc">False</span>
-
-        <span class="k">return</span> <span class="kc">True</span>
-
-    <span class="k">def</span> <span class="nf">_verify_inputs</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">inputs</span><span class="p">:</span> <span class="nb">set</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">bool</span><span class="p">:</span>
-        <span class="sd">&#39;&#39;&#39;Checks if pipeline inputs don&#39;t contain references to a component</span>
-
-<span class="sd">        Parameters</span>
-<span class="sd">        ----------</span>
-<span class="sd">        inputs : set</span>
-<span class="sd">            Pipeline inputs</span>
-
-<span class="sd">        Returns</span>
-<span class="sd">        -------</span>
-<span class="sd">        bool</span>
-<span class="sd">            if correct</span>
-<span class="sd">        &#39;&#39;&#39;</span>
-
-        <span class="k">for</span> <span class="n">input_</span> <span class="ow">in</span> <span class="n">inputs</span><span class="p">:</span>
-            <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">input_</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="s2">&quot;.&quot;</span><span class="p">))</span> <span class="o">&gt;</span> <span class="mi">1</span><span class="p">:</span>
-                <span class="k">return</span> <span class="kc">False</span>
-        <span class="k">return</span> <span class="kc">True</span>
-
     <span class="k">def</span> <span class="nf">build_pipeline</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">config_path</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Pipeline</span><span class="p">:</span>
-        <span class="sd">&#39;&#39;&#39;Builds the pipeline from configuration</span>
+        <span class="sd">&quot;&quot;&quot;Builds the pipeline from configuration</span>
 
 <span class="sd">        Parameters</span>
 <span class="sd">        ----------</span>
@@ -376,24 +107,13 @@ mlpipeline<wbr>.<a href="./../pipeline.html">pipeline</a><wbr>.pipeline_builder 
 <span class="sd">        -------</span>
 <span class="sd">        Pipeline</span>
 <span class="sd">            executable pipeline</span>
-<span class="sd">        &#39;&#39;&#39;</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">parser</span> <span class="o">=</span> <span class="n">ConfigParser</span><span class="p">()</span>
+        <span class="n">name</span><span class="p">,</span> <span class="n">inputs</span><span class="p">,</span> <span class="n">outputs</span><span class="p">,</span> <span class="n">components</span> <span class="o">=</span> <span class="n">parser</span><span class="o">.</span><span class="n">parse_config</span><span class="p">(</span><span class="n">config_path</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">_components_module</span><span class="p">)</span>
 
-        <span class="n">config</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_read_config</span><span class="p">(</span><span class="n">config_path</span><span class="p">)[</span><span class="s2">&quot;pipeline&quot;</span><span class="p">]</span>
-        <span class="n">name</span> <span class="o">=</span> <span class="n">config</span><span class="p">[</span><span class="s2">&quot;name&quot;</span><span class="p">]</span>
-        <span class="n">inputs</span> <span class="o">=</span> <span class="nb">set</span><span class="p">(</span><span class="n">config</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;inputs&quot;</span><span class="p">,</span> <span class="p">[]))</span>
-        <span class="k">if</span> <span class="ow">not</span> <span class="bp">self</span><span class="o">.</span><span class="n">_verify_inputs</span><span class="p">(</span><span class="n">inputs</span><span class="p">):</span>
-            <span class="n">L</span><span class="o">.</span><span class="n">error</span><span class="p">(</span><span class="s2">&quot;Incorrect inputs, shutting down&quot;</span><span class="p">)</span>
-            <span class="k">raise</span> <span class="ne">RuntimeError</span><span class="p">(</span><span class="s2">&quot;Incorrect inputs&quot;</span><span class="p">)</span>
+        <span class="n">graph_utils</span> <span class="o">=</span> <span class="n">GraphUtils</span><span class="p">()</span>
+        <span class="n">running_order</span> <span class="o">=</span> <span class="n">graph_utils</span><span class="o">.</span><span class="n">get_running_order</span><span class="p">(</span><span class="n">components</span><span class="p">,</span> <span class="n">inputs</span><span class="p">,</span> <span class="n">outputs</span><span class="p">)</span>
 
-        <span class="n">outputs</span> <span class="o">=</span> <span class="nb">set</span><span class="p">(</span><span class="n">config</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;outputs&quot;</span><span class="p">,</span> <span class="p">[]))</span>
-        <span class="k">if</span> <span class="s2">&quot;components&quot;</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">config</span><span class="p">:</span>
-            <span class="n">L</span><span class="o">.</span><span class="n">error</span><span class="p">(</span><span class="s2">&quot;No components, shutting down&quot;</span><span class="p">)</span>
-            <span class="k">raise</span> <span class="ne">RuntimeError</span><span class="p">(</span><span class="s2">&quot;There are no components specified in config&quot;</span><span class="p">)</span>
-
-        <span class="n">components_definintion</span> <span class="o">=</span> <span class="n">config</span><span class="p">[</span><span class="s2">&quot;components&quot;</span><span class="p">]</span>
-        <span class="n">components</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_parse_components</span><span class="p">(</span><span class="n">components_definintion</span><span class="p">)</span>
-        <span class="n">graph</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_create_graph</span><span class="p">(</span><span class="n">components</span><span class="p">,</span> <span class="n">inputs</span><span class="p">,</span> <span class="n">outputs</span><span class="p">)</span>
-        <span class="n">running_order</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_get_running_order</span><span class="p">(</span><span class="n">graph</span><span class="p">)</span>
         <span class="k">return</span> <span class="n">Pipeline</span><span class="p">(</span><span class="n">name</span><span class="p">,</span> <span class="n">inputs</span><span class="p">,</span> <span class="n">outputs</span><span class="p">,</span> <span class="n">components</span><span class="p">,</span> <span class="n">running_order</span><span class="p">)</span>
 </pre></div>
 
@@ -412,7 +132,7 @@ mlpipeline<wbr>.<a href="./../pipeline.html">pipeline</a><wbr>.pipeline_builder 
                 <details>
             <summary>View Source</summary>
             <div class="codehilite"><pre><span></span><span class="k">class</span> <span class="nc">PipelineBuilder</span><span class="p">:</span>
-    <span class="sd">&#39;&#39;&#39;</span>
+    <span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">    Reads config file and builds the pipeline.</span>
 
 <span class="sd">    ...</span>
@@ -421,288 +141,20 @@ mlpipeline<wbr>.<a href="./../pipeline.html">pipeline</a><wbr>.pipeline_builder 
 <span class="sd">    -------</span>
 <span class="sd">    build_pipeline(config_path: str)</span>
 <span class="sd">        Creates pipeline from given config</span>
-<span class="sd">    &#39;&#39;&#39;</span>
+<span class="sd">    &quot;&quot;&quot;</span>
 
     <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">components_module</span><span class="p">:</span> <span class="nb">str</span><span class="p">):</span>
-        <span class="sd">&#39;&#39;&#39;</span>
+        <span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">        Parameters</span>
 <span class="sd">        ----------</span>
 <span class="sd">        components_module : str</span>
 <span class="sd">            A path where components are defined</span>
-<span class="sd">        &#39;&#39;&#39;</span>
+<span class="sd">        &quot;&quot;&quot;</span>
 
         <span class="bp">self</span><span class="o">.</span><span class="n">_components_module</span> <span class="o">=</span> <span class="n">components_module</span>
 
-    <span class="k">def</span> <span class="nf">_read_config</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">config_path</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">dict</span><span class="p">:</span>
-        <span class="sd">&#39;&#39;&#39; Reads config yaml file and creates a dictionary</span>
-
-<span class="sd">        Parameters</span>
-<span class="sd">        ----------</span>
-<span class="sd">        config_path : str</span>
-<span class="sd">            A path to configuration of pipeline and components</span>
-
-<span class="sd">        Returns</span>
-<span class="sd">        -------</span>
-<span class="sd">        dict</span>
-<span class="sd">            config</span>
-<span class="sd">        &#39;&#39;&#39;</span>
-
-        <span class="k">with</span> <span class="nb">open</span><span class="p">(</span><span class="n">config_path</span><span class="p">)</span> <span class="k">as</span> <span class="n">fp</span><span class="p">:</span>
-            <span class="k">return</span> <span class="n">yaml</span><span class="o">.</span><span class="n">safe_load</span><span class="p">(</span><span class="n">fp</span><span class="p">)</span>
-
-    <span class="k">def</span> <span class="nf">_parse_components</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">components_definition</span><span class="p">:</span> <span class="nb">dict</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">dict</span><span class="p">:</span>
-        <span class="sd">&#39;&#39;&#39;Creates componenents from configuration.</span>
-
-<span class="sd">        Parameters</span>
-<span class="sd">        ----------</span>
-<span class="sd">        components_definition : dict</span>
-<span class="sd">            A dictionary with raw components info from configuration</span>
-
-<span class="sd">        Returns</span>
-<span class="sd">        -------</span>
-<span class="sd">        dict</span>
-<span class="sd">            component_id -&gt; component</span>
-<span class="sd">        &#39;&#39;&#39;</span>
-
-        <span class="n">components</span> <span class="o">=</span> <span class="p">{}</span>
-        <span class="k">for</span> <span class="n">component_name</span> <span class="ow">in</span> <span class="n">components_definition</span><span class="p">:</span>
-            <span class="n">components</span><span class="p">[</span><span class="n">component_name</span><span class="p">]</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_build_component</span><span class="p">(</span><span class="n">component_name</span><span class="p">,</span> <span class="n">components_definition</span><span class="p">[</span><span class="n">component_name</span><span class="p">])</span>
-
-        <span class="k">return</span> <span class="n">components</span>
-
-    <span class="k">def</span> <span class="nf">_build_component</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">component_name</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">component_definition</span><span class="p">:</span> <span class="nb">dict</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Component</span><span class="p">:</span>
-        <span class="sd">&#39;&#39;&#39;Creates single omponenent from its&#39; configuration.</span>
-
-<span class="sd">        Parameters</span>
-<span class="sd">        ----------</span>
-<span class="sd">        component_name : str</span>
-<span class="sd">            Name of the component</span>
-<span class="sd">        component_definition : dict</span>
-<span class="sd">            A dictionary with raw component info from configuration</span>
-
-<span class="sd">        Returns</span>
-<span class="sd">        -------</span>
-<span class="sd">        Component</span>
-<span class="sd">            a component object</span>
-<span class="sd">        &#39;&#39;&#39;</span>
-
-        <span class="n">module</span> <span class="o">=</span> <span class="n">importlib</span><span class="o">.</span><span class="n">import_module</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_components_module</span><span class="p">)</span>
-        <span class="n">component_class</span> <span class="o">=</span> <span class="nb">getattr</span><span class="p">(</span><span class="n">module</span><span class="p">,</span> <span class="n">component_definition</span><span class="p">[</span><span class="s2">&quot;runner&quot;</span><span class="p">])</span>
-        <span class="k">return</span> <span class="n">component_class</span><span class="o">.</span><span class="n">construct</span><span class="p">(</span><span class="n">component_name</span><span class="p">,</span> <span class="n">component_definition</span><span class="p">)</span>
-
-    <span class="k">def</span> <span class="nf">_create_graph</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">components</span><span class="p">:</span> <span class="nb">dict</span><span class="p">,</span> <span class="n">inputs</span><span class="p">:</span> <span class="nb">set</span><span class="p">,</span> <span class="n">outputs</span><span class="p">:</span> <span class="nb">set</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">dict</span><span class="p">:</span>
-        <span class="sd">&#39;&#39;&#39;Creates the dependency graph between components, where node is component id and edge represents the link between them.</span>
-
-<span class="sd">        Parameters</span>
-<span class="sd">        ----------</span>
-<span class="sd">        components : dict</span>
-<span class="sd">            The components info</span>
-
-<span class="sd">        inputs: set</span>
-<span class="sd">            The set of pipeline inputs</span>
-<span class="sd">        outputs: set</span>
-<span class="sd">            The set of pipeline outputs</span>
-
-<span class="sd">        Returns</span>
-<span class="sd">        -------</span>
-<span class="sd">        dict</span>
-<span class="sd">            graph representation of components</span>
-
-<span class="sd">        Raises</span>
-<span class="sd">        ------</span>
-<span class="sd">        RuntimeError</span>
-<span class="sd">            If the inputs of one component don&#39;t match with the output of the component it depends on</span>
-<span class="sd">            OR inputs and outputs in incorrect format</span>
-<span class="sd">        &#39;&#39;&#39;</span>
-
-        <span class="n">graph</span> <span class="o">=</span> <span class="p">{}</span>
-        <span class="k">for</span> <span class="n">component_id</span> <span class="ow">in</span> <span class="n">components</span><span class="p">:</span>
-            <span class="n">dependencies</span> <span class="o">=</span> <span class="n">components</span><span class="p">[</span><span class="n">component_id</span><span class="p">]</span><span class="o">.</span><span class="n">dependencies</span>
-            <span class="k">if</span> <span class="n">component_id</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">graph</span><span class="p">:</span>
-                <span class="n">graph</span><span class="p">[</span><span class="n">component_id</span><span class="p">]</span> <span class="o">=</span> <span class="nb">set</span><span class="p">()</span>
-
-            <span class="k">for</span> <span class="n">dependency</span> <span class="ow">in</span> <span class="n">dependencies</span><span class="p">:</span>
-                <span class="k">if</span> <span class="n">dependency</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">graph</span><span class="p">:</span>
-                    <span class="n">graph</span><span class="p">[</span><span class="n">dependency</span><span class="p">]</span> <span class="o">=</span> <span class="nb">set</span><span class="p">()</span>
-
-                <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">_verify_edge</span><span class="p">(</span><span class="n">components</span><span class="p">,</span> <span class="n">inputs</span><span class="p">,</span> <span class="n">outputs</span><span class="p">,</span> <span class="n">dependency</span><span class="p">,</span> <span class="n">component_id</span><span class="p">):</span>
-                    <span class="n">graph</span><span class="p">[</span><span class="n">dependency</span><span class="p">]</span><span class="o">.</span><span class="n">add</span><span class="p">(</span><span class="n">component_id</span><span class="p">)</span>
-                <span class="k">else</span><span class="p">:</span>
-                    <span class="n">L</span><span class="o">.</span><span class="n">error</span><span class="p">(</span><span class="s2">&quot;Incorrect graph, shutting down&quot;</span><span class="p">)</span>
-                    <span class="k">raise</span> <span class="ne">RuntimeError</span><span class="p">(</span><span class="s2">&quot;Incorrect link from </span><span class="si">{}</span><span class="s2"> to </span><span class="si">{}</span><span class="s2">, inputs don&#39;t match the outputs&quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">dependency</span><span class="p">,</span> <span class="n">component_id</span><span class="p">))</span>
-
-        <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">outputs</span><span class="p">)</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="p">:</span>
-            <span class="n">graph</span><span class="p">[</span><span class="s2">&quot;outputs&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="nb">set</span><span class="p">()</span>
-
-        <span class="k">for</span> <span class="n">output</span> <span class="ow">in</span> <span class="n">outputs</span><span class="p">:</span>
-            <span class="n">output_split</span> <span class="o">=</span> <span class="n">output</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="s2">&quot;.&quot;</span><span class="p">)</span>
-            <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">output_split</span><span class="p">)</span> <span class="o">==</span> <span class="mi">1</span><span class="p">:</span>
-                <span class="k">if</span> <span class="n">output_split</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">inputs</span><span class="p">:</span>
-                    <span class="n">L</span><span class="o">.</span><span class="n">error</span><span class="p">(</span><span class="s2">&quot;Incorrect outputs, shutting down&quot;</span><span class="p">)</span>
-                    <span class="k">raise</span> <span class="ne">RuntimeError</span><span class="p">(</span><span class="s2">&quot;Incorrect outputs </span><span class="si">{}</span><span class="s2">&quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">outputs</span><span class="p">))</span>
-
-                <span class="n">graph</span><span class="p">[</span><span class="s2">&quot;inputs&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">add</span><span class="p">(</span><span class="s2">&quot;outputs&quot;</span><span class="p">)</span>
-
-            <span class="k">elif</span> <span class="nb">len</span><span class="p">(</span><span class="n">output_split</span><span class="p">)</span> <span class="o">==</span> <span class="mi">2</span><span class="p">:</span>
-                <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">_verify_edge</span><span class="p">(</span><span class="n">components</span><span class="p">,</span> <span class="n">inputs</span><span class="p">,</span> <span class="n">outputs</span><span class="p">,</span> <span class="n">output_split</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="s2">&quot;outputs&quot;</span><span class="p">):</span>
-                    <span class="n">graph</span><span class="p">[</span><span class="n">output_split</span><span class="p">[</span><span class="mi">0</span><span class="p">]]</span><span class="o">.</span><span class="n">add</span><span class="p">(</span><span class="s2">&quot;outputs&quot;</span><span class="p">)</span>
-                <span class="k">else</span><span class="p">:</span>
-                    <span class="n">L</span><span class="o">.</span><span class="n">error</span><span class="p">(</span><span class="s2">&quot;Incorrect outputs, shutting down&quot;</span><span class="p">)</span>
-                    <span class="k">raise</span> <span class="ne">RuntimeError</span><span class="p">(</span><span class="s2">&quot;Incorrect outputs </span><span class="si">{}</span><span class="s2">&quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">outputs</span><span class="p">))</span>
-
-            <span class="k">else</span><span class="p">:</span>
-                <span class="n">L</span><span class="o">.</span><span class="n">error</span><span class="p">(</span><span class="s2">&quot;Incorrect inputs, shutting down&quot;</span><span class="p">)</span>
-                <span class="k">raise</span> <span class="ne">RuntimeError</span><span class="p">(</span><span class="s2">&quot;Incorrect input </span><span class="si">{}</span><span class="s2">, should be &lt;component_id&gt;.&lt;input_name&gt;&quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">output</span><span class="p">))</span>
-
-        <span class="k">return</span> <span class="n">graph</span>
-
-    <span class="k">def</span> <span class="nf">_get_running_order</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">graph</span><span class="p">:</span> <span class="nb">dict</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">list</span><span class="p">:</span>
-        <span class="sd">&#39;&#39;&#39;Gets the dependency graph topologically sorted and creates an order of components to be executed in optimal order.</span>
-<span class="sd">        Checks if the graph contains a cycle (if output of one component is referenced somewhere in its&#39; deps)</span>
-
-<span class="sd">        Parameters</span>
-<span class="sd">        ----------</span>
-<span class="sd">        graph : dict</span>
-<span class="sd">            Components dependency graph</span>
-
-<span class="sd">        Returns</span>
-<span class="sd">        -------</span>
-<span class="sd">        list</span>
-<span class="sd">            running order of the graph</span>
-
-<span class="sd">        Raises</span>
-<span class="sd">        ------</span>
-<span class="sd">        RuntimeError</span>
-<span class="sd">            If the graph contains a cycle</span>
-<span class="sd">        &#39;&#39;&#39;</span>
-
-        <span class="n">visited</span> <span class="o">=</span> <span class="nb">set</span><span class="p">()</span>
-        <span class="n">running_order</span> <span class="o">=</span> <span class="p">[]</span>
-        <span class="k">for</span> <span class="n">component_id</span> <span class="ow">in</span> <span class="n">graph</span><span class="p">:</span>
-            <span class="k">if</span> <span class="n">component_id</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">visited</span><span class="p">:</span>
-                <span class="bp">self</span><span class="o">.</span><span class="n">_get_running_order_util</span><span class="p">(</span><span class="n">component_id</span><span class="p">,</span> <span class="n">graph</span><span class="p">,</span> <span class="n">visited</span><span class="p">,</span> <span class="n">running_order</span><span class="p">)</span>
-
-        <span class="k">if</span> <span class="ow">not</span> <span class="bp">self</span><span class="o">.</span><span class="n">_check_cycle</span><span class="p">(</span><span class="n">running_order</span><span class="p">[:],</span> <span class="n">graph</span><span class="p">):</span>
-            <span class="n">running_order</span><span class="o">.</span><span class="n">reverse</span><span class="p">()</span>
-        <span class="k">else</span><span class="p">:</span>
-            <span class="n">L</span><span class="o">.</span><span class="n">error</span><span class="p">(</span><span class="s2">&quot;Incorrect graph, shutting down&quot;</span><span class="p">)</span>
-            <span class="k">raise</span> <span class="ne">RuntimeError</span><span class="p">(</span><span class="s2">&quot;The component pipeline contains cycle&quot;</span><span class="p">)</span>
-
-        <span class="k">return</span> <span class="n">running_order</span>
-
-    <span class="k">def</span> <span class="nf">_get_running_order_util</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">component_id</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">graph</span><span class="p">:</span> <span class="nb">dict</span><span class="p">,</span> <span class="n">visited</span><span class="p">:</span> <span class="nb">set</span><span class="p">,</span> <span class="n">running_order</span><span class="p">:</span> <span class="nb">list</span><span class="p">):</span>
-        <span class="sd">&#39;&#39;&#39;Helper function for _get_running_order</span>
-<span class="sd">        &#39;&#39;&#39;</span>
-
-        <span class="n">visited</span><span class="o">.</span><span class="n">add</span><span class="p">(</span><span class="n">component_id</span><span class="p">)</span>
-
-        <span class="k">for</span> <span class="n">neighbor</span> <span class="ow">in</span> <span class="n">graph</span><span class="p">[</span><span class="n">component_id</span><span class="p">]:</span>
-            <span class="k">if</span> <span class="n">neighbor</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">visited</span><span class="p">:</span>
-                <span class="bp">self</span><span class="o">.</span><span class="n">_get_running_order_util</span><span class="p">(</span><span class="n">neighbor</span><span class="p">,</span> <span class="n">graph</span><span class="p">,</span> <span class="n">visited</span><span class="p">,</span> <span class="n">running_order</span><span class="p">)</span>
-
-        <span class="n">running_order</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">component_id</span><span class="p">)</span>
-
-    <span class="k">def</span> <span class="nf">_check_cycle</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">running_order_reversed</span><span class="p">:</span> <span class="nb">list</span><span class="p">,</span> <span class="n">graph</span><span class="p">:</span> <span class="nb">dict</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">bool</span><span class="p">:</span>
-        <span class="sd">&#39;&#39;&#39;Checks if the dependency graph contains a cycle</span>
-
-<span class="sd">        Parameters</span>
-<span class="sd">        ----------</span>
-<span class="sd">        running_order_reversed : list</span>
-<span class="sd">            Stack of visited nodes</span>
-<span class="sd">        graph : dict</span>
-<span class="sd">            Components dependency graph</span>
-
-<span class="sd">        Returns</span>
-<span class="sd">        -------</span>
-<span class="sd">        bool</span>
-<span class="sd">            if contains a cycle</span>
-<span class="sd">        &#39;&#39;&#39;</span>
-
-        <span class="n">top_order</span> <span class="o">=</span> <span class="nb">dict</span><span class="p">()</span>
-        <span class="n">index</span> <span class="o">=</span> <span class="mi">0</span>
-        <span class="k">while</span> <span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">running_order_reversed</span><span class="p">)</span> <span class="o">!=</span> <span class="mi">0</span><span class="p">):</span>
-            <span class="n">top_order</span><span class="p">[</span><span class="n">running_order_reversed</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">]]</span> <span class="o">=</span> <span class="n">index</span>
-            <span class="n">index</span> <span class="o">+=</span> <span class="mi">1</span>
-            <span class="n">running_order_reversed</span><span class="o">.</span><span class="n">pop</span><span class="p">()</span>
-
-        <span class="k">for</span> <span class="n">component_id</span> <span class="ow">in</span> <span class="n">graph</span><span class="p">:</span>
-            <span class="k">for</span> <span class="n">neighbor</span> <span class="ow">in</span> <span class="n">graph</span><span class="p">[</span><span class="n">component_id</span><span class="p">]:</span>
-                <span class="n">first</span> <span class="o">=</span> <span class="mi">0</span> <span class="k">if</span> <span class="n">component_id</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">top_order</span> <span class="k">else</span> <span class="n">top_order</span><span class="p">[</span><span class="n">component_id</span><span class="p">]</span>
-                <span class="n">second</span> <span class="o">=</span> <span class="mi">0</span> <span class="k">if</span> <span class="n">neighbor</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">top_order</span> <span class="k">else</span> <span class="n">top_order</span><span class="p">[</span><span class="n">neighbor</span><span class="p">]</span>
-                <span class="k">if</span> <span class="p">(</span><span class="n">first</span> <span class="o">&gt;</span> <span class="n">second</span><span class="p">):</span>
-                    <span class="k">return</span> <span class="kc">True</span>
-
-        <span class="k">return</span> <span class="kc">False</span>
-
-    <span class="k">def</span> <span class="nf">_verify_edge</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">components</span><span class="p">:</span> <span class="nb">dict</span><span class="p">,</span> <span class="n">inputs</span><span class="p">:</span> <span class="nb">set</span><span class="p">,</span> <span class="n">outputs</span><span class="p">:</span> <span class="nb">set</span><span class="p">,</span> <span class="n">from_id</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">to_id</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">bool</span><span class="p">:</span>
-        <span class="sd">&#39;&#39;&#39;Checks if an edge is correct (input of one component matches the output of its dependency)</span>
-
-<span class="sd">        Parameters</span>
-<span class="sd">        ----------</span>
-<span class="sd">        components : dict</span>
-<span class="sd">            All components</span>
-<span class="sd">        inputs : set</span>
-<span class="sd">            Pipeline inputs</span>
-<span class="sd">        outputs : set</span>
-<span class="sd">            Pipeline outputs</span>
-<span class="sd">        from_id : str</span>
-<span class="sd">            Id of previous component</span>
-<span class="sd">        to_id : str</span>
-<span class="sd">            Id of next component</span>
-
-<span class="sd">        Returns</span>
-<span class="sd">        -------</span>
-<span class="sd">        bool</span>
-<span class="sd">            if correct</span>
-<span class="sd">        &#39;&#39;&#39;</span>
-
-        <span class="k">if</span> <span class="n">from_id</span> <span class="o">==</span> <span class="s1">&#39;inputs&#39;</span><span class="p">:</span>
-            <span class="n">outputs_from</span> <span class="o">=</span> <span class="n">inputs</span>
-        <span class="k">else</span><span class="p">:</span>
-            <span class="k">if</span> <span class="n">from_id</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">components</span><span class="p">:</span>
-                <span class="k">return</span> <span class="kc">False</span>
-
-            <span class="n">outputs_from</span> <span class="o">=</span> <span class="n">components</span><span class="p">[</span><span class="n">from_id</span><span class="p">]</span><span class="o">.</span><span class="n">outputs</span>
-
-        <span class="k">if</span> <span class="n">to_id</span> <span class="o">==</span> <span class="s1">&#39;outputs&#39;</span><span class="p">:</span>
-            <span class="n">inputs_to</span> <span class="o">=</span> <span class="n">outputs</span>
-        <span class="k">else</span><span class="p">:</span>
-            <span class="k">if</span> <span class="n">to_id</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">components</span><span class="p">:</span>
-                <span class="k">return</span> <span class="kc">False</span>
-
-            <span class="n">inputs_to</span> <span class="o">=</span> <span class="n">components</span><span class="p">[</span><span class="n">to_id</span><span class="p">]</span><span class="o">.</span><span class="n">inputs</span>
-
-        <span class="k">for</span> <span class="n">inpt</span> <span class="ow">in</span> <span class="n">inputs_to</span><span class="p">:</span>
-            <span class="n">split_inpt</span> <span class="o">=</span> <span class="n">inpt</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="s2">&quot;.&quot;</span><span class="p">)</span>
-            <span class="k">if</span> <span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">split_inpt</span><span class="p">)</span> <span class="o">==</span> <span class="mi">1</span><span class="p">)</span> <span class="ow">and</span> <span class="p">(</span><span class="n">split_inpt</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">outputs_from</span><span class="p">):</span>
-                <span class="k">return</span> <span class="kc">False</span>
-
-            <span class="k">if</span> <span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">split_inpt</span><span class="p">)</span> <span class="o">==</span> <span class="mi">2</span><span class="p">)</span> <span class="ow">and</span> <span class="p">(</span><span class="n">split_inpt</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">==</span> <span class="n">from_id</span><span class="p">)</span> <span class="ow">and</span> <span class="p">(</span><span class="n">split_inpt</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">outputs_from</span><span class="p">):</span>
-                <span class="k">return</span> <span class="kc">False</span>
-
-        <span class="k">return</span> <span class="kc">True</span>
-
-    <span class="k">def</span> <span class="nf">_verify_inputs</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">inputs</span><span class="p">:</span> <span class="nb">set</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">bool</span><span class="p">:</span>
-        <span class="sd">&#39;&#39;&#39;Checks if pipeline inputs don&#39;t contain references to a component</span>
-
-<span class="sd">        Parameters</span>
-<span class="sd">        ----------</span>
-<span class="sd">        inputs : set</span>
-<span class="sd">            Pipeline inputs</span>
-
-<span class="sd">        Returns</span>
-<span class="sd">        -------</span>
-<span class="sd">        bool</span>
-<span class="sd">            if correct</span>
-<span class="sd">        &#39;&#39;&#39;</span>
-
-        <span class="k">for</span> <span class="n">input_</span> <span class="ow">in</span> <span class="n">inputs</span><span class="p">:</span>
-            <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">input_</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="s2">&quot;.&quot;</span><span class="p">))</span> <span class="o">&gt;</span> <span class="mi">1</span><span class="p">:</span>
-                <span class="k">return</span> <span class="kc">False</span>
-        <span class="k">return</span> <span class="kc">True</span>
-
     <span class="k">def</span> <span class="nf">build_pipeline</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">config_path</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Pipeline</span><span class="p">:</span>
-        <span class="sd">&#39;&#39;&#39;Builds the pipeline from configuration</span>
+        <span class="sd">&quot;&quot;&quot;Builds the pipeline from configuration</span>
 
 <span class="sd">        Parameters</span>
 <span class="sd">        ----------</span>
@@ -713,24 +165,13 @@ mlpipeline<wbr>.<a href="./../pipeline.html">pipeline</a><wbr>.pipeline_builder 
 <span class="sd">        -------</span>
 <span class="sd">        Pipeline</span>
 <span class="sd">            executable pipeline</span>
-<span class="sd">        &#39;&#39;&#39;</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">parser</span> <span class="o">=</span> <span class="n">ConfigParser</span><span class="p">()</span>
+        <span class="n">name</span><span class="p">,</span> <span class="n">inputs</span><span class="p">,</span> <span class="n">outputs</span><span class="p">,</span> <span class="n">components</span> <span class="o">=</span> <span class="n">parser</span><span class="o">.</span><span class="n">parse_config</span><span class="p">(</span><span class="n">config_path</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">_components_module</span><span class="p">)</span>
 
-        <span class="n">config</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_read_config</span><span class="p">(</span><span class="n">config_path</span><span class="p">)[</span><span class="s2">&quot;pipeline&quot;</span><span class="p">]</span>
-        <span class="n">name</span> <span class="o">=</span> <span class="n">config</span><span class="p">[</span><span class="s2">&quot;name&quot;</span><span class="p">]</span>
-        <span class="n">inputs</span> <span class="o">=</span> <span class="nb">set</span><span class="p">(</span><span class="n">config</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;inputs&quot;</span><span class="p">,</span> <span class="p">[]))</span>
-        <span class="k">if</span> <span class="ow">not</span> <span class="bp">self</span><span class="o">.</span><span class="n">_verify_inputs</span><span class="p">(</span><span class="n">inputs</span><span class="p">):</span>
-            <span class="n">L</span><span class="o">.</span><span class="n">error</span><span class="p">(</span><span class="s2">&quot;Incorrect inputs, shutting down&quot;</span><span class="p">)</span>
-            <span class="k">raise</span> <span class="ne">RuntimeError</span><span class="p">(</span><span class="s2">&quot;Incorrect inputs&quot;</span><span class="p">)</span>
+        <span class="n">graph_utils</span> <span class="o">=</span> <span class="n">GraphUtils</span><span class="p">()</span>
+        <span class="n">running_order</span> <span class="o">=</span> <span class="n">graph_utils</span><span class="o">.</span><span class="n">get_running_order</span><span class="p">(</span><span class="n">components</span><span class="p">,</span> <span class="n">inputs</span><span class="p">,</span> <span class="n">outputs</span><span class="p">)</span>
 
-        <span class="n">outputs</span> <span class="o">=</span> <span class="nb">set</span><span class="p">(</span><span class="n">config</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;outputs&quot;</span><span class="p">,</span> <span class="p">[]))</span>
-        <span class="k">if</span> <span class="s2">&quot;components&quot;</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">config</span><span class="p">:</span>
-            <span class="n">L</span><span class="o">.</span><span class="n">error</span><span class="p">(</span><span class="s2">&quot;No components, shutting down&quot;</span><span class="p">)</span>
-            <span class="k">raise</span> <span class="ne">RuntimeError</span><span class="p">(</span><span class="s2">&quot;There are no components specified in config&quot;</span><span class="p">)</span>
-
-        <span class="n">components_definintion</span> <span class="o">=</span> <span class="n">config</span><span class="p">[</span><span class="s2">&quot;components&quot;</span><span class="p">]</span>
-        <span class="n">components</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_parse_components</span><span class="p">(</span><span class="n">components_definintion</span><span class="p">)</span>
-        <span class="n">graph</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_create_graph</span><span class="p">(</span><span class="n">components</span><span class="p">,</span> <span class="n">inputs</span><span class="p">,</span> <span class="n">outputs</span><span class="p">)</span>
-        <span class="n">running_order</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_get_running_order</span><span class="p">(</span><span class="n">graph</span><span class="p">)</span>
         <span class="k">return</span> <span class="n">Pipeline</span><span class="p">(</span><span class="n">name</span><span class="p">,</span> <span class="n">inputs</span><span class="p">,</span> <span class="n">outputs</span><span class="p">,</span> <span class="n">components</span><span class="p">,</span> <span class="n">running_order</span><span class="p">)</span>
 </pre></div>
 
@@ -757,12 +198,12 @@ mlpipeline<wbr>.<a href="./../pipeline.html">pipeline</a><wbr>.pipeline_builder 
                 <details>
             <summary>View Source</summary>
             <div class="codehilite"><pre><span></span>    <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">components_module</span><span class="p">:</span> <span class="nb">str</span><span class="p">):</span>
-        <span class="sd">&#39;&#39;&#39;</span>
+        <span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">        Parameters</span>
 <span class="sd">        ----------</span>
 <span class="sd">        components_module : str</span>
 <span class="sd">            A path where components are defined</span>
-<span class="sd">        &#39;&#39;&#39;</span>
+<span class="sd">        &quot;&quot;&quot;</span>
 
         <span class="bp">self</span><span class="o">.</span><span class="n">_components_module</span> <span class="o">=</span> <span class="n">components_module</span>
 </pre></div>
@@ -788,7 +229,7 @@ mlpipeline<wbr>.<a href="./../pipeline.html">pipeline</a><wbr>.pipeline_builder 
                 <details>
             <summary>View Source</summary>
             <div class="codehilite"><pre><span></span>    <span class="k">def</span> <span class="nf">build_pipeline</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">config_path</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Pipeline</span><span class="p">:</span>
-        <span class="sd">&#39;&#39;&#39;Builds the pipeline from configuration</span>
+        <span class="sd">&quot;&quot;&quot;Builds the pipeline from configuration</span>
 
 <span class="sd">        Parameters</span>
 <span class="sd">        ----------</span>
@@ -799,24 +240,13 @@ mlpipeline<wbr>.<a href="./../pipeline.html">pipeline</a><wbr>.pipeline_builder 
 <span class="sd">        -------</span>
 <span class="sd">        Pipeline</span>
 <span class="sd">            executable pipeline</span>
-<span class="sd">        &#39;&#39;&#39;</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">parser</span> <span class="o">=</span> <span class="n">ConfigParser</span><span class="p">()</span>
+        <span class="n">name</span><span class="p">,</span> <span class="n">inputs</span><span class="p">,</span> <span class="n">outputs</span><span class="p">,</span> <span class="n">components</span> <span class="o">=</span> <span class="n">parser</span><span class="o">.</span><span class="n">parse_config</span><span class="p">(</span><span class="n">config_path</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">_components_module</span><span class="p">)</span>
 
-        <span class="n">config</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_read_config</span><span class="p">(</span><span class="n">config_path</span><span class="p">)[</span><span class="s2">&quot;pipeline&quot;</span><span class="p">]</span>
-        <span class="n">name</span> <span class="o">=</span> <span class="n">config</span><span class="p">[</span><span class="s2">&quot;name&quot;</span><span class="p">]</span>
-        <span class="n">inputs</span> <span class="o">=</span> <span class="nb">set</span><span class="p">(</span><span class="n">config</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;inputs&quot;</span><span class="p">,</span> <span class="p">[]))</span>
-        <span class="k">if</span> <span class="ow">not</span> <span class="bp">self</span><span class="o">.</span><span class="n">_verify_inputs</span><span class="p">(</span><span class="n">inputs</span><span class="p">):</span>
-            <span class="n">L</span><span class="o">.</span><span class="n">error</span><span class="p">(</span><span class="s2">&quot;Incorrect inputs, shutting down&quot;</span><span class="p">)</span>
-            <span class="k">raise</span> <span class="ne">RuntimeError</span><span class="p">(</span><span class="s2">&quot;Incorrect inputs&quot;</span><span class="p">)</span>
+        <span class="n">graph_utils</span> <span class="o">=</span> <span class="n">GraphUtils</span><span class="p">()</span>
+        <span class="n">running_order</span> <span class="o">=</span> <span class="n">graph_utils</span><span class="o">.</span><span class="n">get_running_order</span><span class="p">(</span><span class="n">components</span><span class="p">,</span> <span class="n">inputs</span><span class="p">,</span> <span class="n">outputs</span><span class="p">)</span>
 
-        <span class="n">outputs</span> <span class="o">=</span> <span class="nb">set</span><span class="p">(</span><span class="n">config</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;outputs&quot;</span><span class="p">,</span> <span class="p">[]))</span>
-        <span class="k">if</span> <span class="s2">&quot;components&quot;</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">config</span><span class="p">:</span>
-            <span class="n">L</span><span class="o">.</span><span class="n">error</span><span class="p">(</span><span class="s2">&quot;No components, shutting down&quot;</span><span class="p">)</span>
-            <span class="k">raise</span> <span class="ne">RuntimeError</span><span class="p">(</span><span class="s2">&quot;There are no components specified in config&quot;</span><span class="p">)</span>
-
-        <span class="n">components_definintion</span> <span class="o">=</span> <span class="n">config</span><span class="p">[</span><span class="s2">&quot;components&quot;</span><span class="p">]</span>
-        <span class="n">components</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_parse_components</span><span class="p">(</span><span class="n">components_definintion</span><span class="p">)</span>
-        <span class="n">graph</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_create_graph</span><span class="p">(</span><span class="n">components</span><span class="p">,</span> <span class="n">inputs</span><span class="p">,</span> <span class="n">outputs</span><span class="p">)</span>
-        <span class="n">running_order</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_get_running_order</span><span class="p">(</span><span class="n">graph</span><span class="p">)</span>
         <span class="k">return</span> <span class="n">Pipeline</span><span class="p">(</span><span class="n">name</span><span class="p">,</span> <span class="n">inputs</span><span class="p">,</span> <span class="n">outputs</span><span class="p">,</span> <span class="n">components</span><span class="p">,</span> <span class="n">running_order</span><span class="p">)</span>
 </pre></div>
 

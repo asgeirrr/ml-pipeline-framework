@@ -3,15 +3,15 @@ from .pipeline import PipelineBuilder
 
 
 def main():
-    parser = argparse.ArgumentParser(description='Should parse config file, read the input and run the pipeline')
-    parser.add_argument('--file', type=str, required=True, help='Config file path')
-    parser.add_argument('--inputs', type=str, help='Input parameters', nargs="+")
+    parser = argparse.ArgumentParser(description="Should parse config file, read the input and run the pipeline")
+    parser.add_argument("--file", type=str, required=True, help="Config file path")
+    parser.add_argument("--inputs", type=str, help="Input parameters", nargs="+")
     args = parser.parse_args()
 
     inputs = {}
     if args.inputs:
         for arg in args.inputs:
-            key, value = arg.split('=')
+            key, value = arg.split("=")
             inputs[key] = value
 
     config_path = args.file

@@ -1,6 +1,5 @@
-import time
 import logging
-from ..utils import get_keys_values
+from ..utils import get_pipeline_message
 
 ##
 L = logging.getLogger(__name__)
@@ -9,7 +8,7 @@ logging.basicConfig(level=logging.INFO)
 
 
 class Pipeline:
-    '''
+    """
     Executes components in topological order and obtains the result
 
     ...
@@ -18,10 +17,10 @@ class Pipeline:
     -------
     execute(input: dict)
         obtains result
-    '''
+    """
 
     def __init__(self, name: str, inputs: set, outputs: set, components: dict, running_order: list):
-        '''
+        """
         Parameters
         ----------
         name : str
@@ -34,28 +33,16 @@ class Pipeline:
             all components component_id -> component
         running_order : list
             component ids in topological order
-        '''
+        """
 
         self.name = name
         self.inputs = inputs
         self.outputs = outputs
         self.components = components
-        self.running_order = self._get_running_order(running_order)
-
-    def _get_running_order(self, running_order: list):
-        '''Returns components in running order without inputs and  outputs
-        '''
-
-        trimmed_running_order = []
-        input_output = set(["inputs", "outputs"])
-        for component_id in running_order:
-            if component_id not in input_output:
-                trimmed_running_order.append(component_id)
-
-        return trimmed_running_order
+        self.running_order = running_order
 
     def _verify_inputs(self, inputs: dict) -> bool:
-        '''Verifies the input from cli if it matches the input expected in pipeline
+        """Verifies the input from cli if it matches the input expected in pipeline
 
         Parameters
         ----------
@@ -66,7 +53,7 @@ class Pipeline:
         -------
         bool
             if correct
-        '''
+        """
 
         inputs_keys = set(inputs.keys())
         if len(inputs_keys & self.inputs) != len(self.inputs):
@@ -74,14 +61,8 @@ class Pipeline:
 
         return True
 
-    def _get_message(self, keys_values: dict, prefix: str) -> str:
-        '''Log line formatter
-        '''
-
-        return "{}: pipeline : {} - {}".format(int(time.time()), prefix, get_keys_values(keys_values))
-
     def execute(self, inputs: dict) -> dict:
-        '''Executes components one by one in topological order
+        """Executes components one by one in topological order
 
         Parameters
         ----------
@@ -96,8 +77,8 @@ class Pipeline:
         Raises
         ------
         RuntimeError
-            If inputs passed from cli don't match the pipeline inputs
-        '''
+            If inputs passed from cli don"t match the pipeline inputs
+        """
 
         if not self._verify_inputs(inputs):
             L.error("Incorrect inputs from command line, shutting down")
@@ -106,20 +87,18 @@ class Pipeline:
         result = {}
         result.update(inputs)
         L.info("Starting the {}".format(self.name))
-        message = self._get_message(inputs, "inputs")
-        L.info(message)
+        L.info(get_pipeline_message(inputs, "inputs"))
 
         for component_id in self.running_order:
             component_result = self.components[component_id].execute(result)
             result[component_id] = component_result
 
         outputs = self._extract_outputs(result)
-        message = self._get_message(outputs, "outputs")
-        L.info(message)
+        L.info(get_pipeline_message(outputs, "outputs"))
         return outputs
 
     def _extract_outputs(self, result: dict) -> dict:
-        '''Extracts outputs from result dictionary
+        """Extracts outputs from result dictionary
 
         Parameters
         ----------
@@ -130,7 +109,7 @@ class Pipeline:
         -------
         dict
             output results
-        '''
+        """
 
         outputs = {}
         for output_key in self.outputs:
@@ -142,12 +121,12 @@ class Pipeline:
         return outputs
 
     def __str__(self):
-        return '''
+        return """
             name: {}
             inputs: {}
             outputs: {}
             components: {}
-        '''.format(self.name, self.inputs, self.outputs, self.components)
+        """.format(self.name, self.inputs, self.outputs, self.components)
 
     def __eq__(self, other):
         if not isinstance(other, Pipeline):

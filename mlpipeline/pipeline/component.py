@@ -1,6 +1,6 @@
 import logging
-import time
-from ..utils import get_keys_values
+from ..utils import get_component_message
+from .component_abc import ComponentABC
 
 ##
 L = logging.getLogger(__name__)
@@ -8,9 +8,9 @@ logging.basicConfig(level=logging.INFO)
 ##
 
 
-class Component:
-    '''
-    Generic component class. Should be exetended
+class Component(ComponentABC):
+    """
+    Less generic component class. Should be exetended
     ...
 
     Methods
@@ -20,25 +20,22 @@ class Component:
 
     process(inputs: dict)
         component logic, should be defined
-    '''
+    """
 
     def __init__(self, component_id: str, component_definition: dict):
-        '''
+        """
         Parameters
         ----------
         component_id : str
             name of the component from config
         component_definition : dict
             raw info about the component from config
-        '''
-
-        self.name = component_id
-        self.inputs = set(component_definition.get("inputs", []))
-        self.outputs = set(component_definition.get("outputs", []))
+        """
+        super().__init__(component_id, component_definition)
         self.dependencies = self._get_dependencies()
 
     def _get_dependencies(self) -> set:
-        '''Parses inputs and extracts dependencies
+        """Parses inputs and extracts dependencies
 
         Returns
         -------
@@ -48,8 +45,8 @@ class Component:
         Raises
         ------
         RuntimeError
-            If inputs passed don't match the pattern <component_id>.<input_id>
-        '''
+            If inputs passed don"t match the pattern <component_id>.<input_id>
+        """
 
         dependencies = set()
         for input_ in self.inputs:
@@ -63,7 +60,7 @@ class Component:
         return dependencies
 
     def execute(self, result: dict) -> dict:
-        '''Executes pipeline components one by one in topological order.
+        """Executes pipeline components one by one in topological order.
 
         Parameters
         ----------
@@ -74,15 +71,15 @@ class Component:
         -------
         dict
             output results
-        '''
+        """
 
         inputs = self._extract_inputs(result)
         outputs = self.process(inputs)
-        L.info(self._get_message(inputs, outputs))
+        L.info(get_component_message(self.name, self.__class__.__name__, inputs, outputs))
         return outputs
 
     def _extract_inputs(self, result: dict) -> dict:
-        '''Extracts inputs from the previous computation in a proper format
+        """Extracts inputs from the previous computation in a proper format
 
         Parameters
         ----------
@@ -93,7 +90,7 @@ class Component:
         -------
         dict
             inputs
-        '''
+        """
 
         inputs = {}
         for input_key in self.inputs:
@@ -106,20 +103,10 @@ class Component:
         return inputs
 
     def process(self, inputs: dict):
-        '''To be defined
-        '''
+        """To be defined
+        """
 
         pass
-
-    def _get_message(self, inputs: dict, outputs: dict) -> str:
-        '''Log message formatting
-        '''
-
-        message = "{}: {} - {}: inputs - {} : outputs - {}".format(
-            int(time.time()), self.name, self.__class__.__name__,
-            get_keys_values(inputs), get_keys_values(outputs)
-        )
-        return message
 
     def __str__(self):
         return "name: {}, inputs: {}, outputs: {}".format(self.name, self.inputs, self.outputs)
@@ -129,7 +116,3 @@ class Component:
             return NotImplemented
 
         return self.name == other.name and self.inputs == other.inputs and self.outputs == other.outputs and self.dependencies == other.dependencies
-
-    @classmethod
-    def construct(cls, name: str, definition: dict):
-        return cls(name, definition)

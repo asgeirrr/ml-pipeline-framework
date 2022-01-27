@@ -9,13 +9,6 @@ class TestPipeline(unittest.TestCase):
         pipeline = pipeline_builder.build_pipeline(path)
         self.assertEqual(set(pipeline.execute({"document_id": 0, "page_num": 1}).keys()), set(["test_processor_3.output_3"]))
 
-    def test_get_running_order(self):
-        pipeline = Pipeline("test", set(), set(), dict(), [])
-        self.assertEqual(pipeline._get_running_order(["inputs", "test_0", "test_1", "outputs"]), ["test_0", "test_1"])
-
-        pipeline = Pipeline("test", set(), set(), dict(), [])
-        self.assertEqual(pipeline._get_running_order(["test_0", "test_1", "outputs"]), ["test_0", "test_1"])
-
     def test_verify_inputs(self):
         pipeline = Pipeline("test", set(["a", "b"]), set(), dict(), [])
         inputs = {"a": 0, "b": 1}

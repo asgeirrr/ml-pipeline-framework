@@ -18,8 +18,8 @@ class ImagePreprocessor(Component):
 
 
 class OCRModel2(Component):
-    '''Passes input to output
-    '''
+    """Passes input to output
+    """
 
     def process(self, inputs: dict) -> dict:
         outputs = {}
