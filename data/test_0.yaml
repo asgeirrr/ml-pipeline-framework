@@ -1,0 +1,13 @@
+pipeline:
+  name: "test pipeline"
+  inputs:
+    - a
+  outputs:
+    - b.c
+  components:
+    b:
+      runner: B
+      inputs:
+        - a
+      outputs:
+        - c

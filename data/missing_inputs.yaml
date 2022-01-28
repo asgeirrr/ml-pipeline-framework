@@ -1,0 +1,22 @@
+pipeline:
+  name: "My missing inputs pipeline."
+  outputs:
+    - extractor.extractions
+  inputs:
+  components:
+    image_preprocessing:
+      runner: ImagePreprocessor
+      outputs:
+        - page_id
+    image_ocr:
+      runner: OCRModel2
+      inputs:
+        - image_preprocessing.page_id
+      outputs:
+        - page_id
+    extractor:
+      runner: ExtractionModel
+      inputs:
+        - image_ocr.page_id
+      outputs:
+        - extractions
